@@ -1,10 +1,13 @@
 import pyaudio
 import time
 import numpy
+from scipy.fft import fft
+from scipy.signal.windows import blackman
 
 p = pyaudio.PyAudio()
 
 input_device = None
+audio_frame_buffer = None
 
 # Get devices
 count = p.get_device_count()
@@ -29,8 +32,17 @@ else:
 def callback(in_data, frame_count, time_info, status):
     frames = memoryview(in_data).cast("f")
     frame_values = numpy.array(frames.tolist())
-    mean_volume = numpy.linalg.norm(frame_values) / numpy.sqrt(frame_count)
-    mean_db = 20 * numpy.log10(mean_volume)
+    global audio_frame_buffer
+    if audio_frame_buffer is None:
+        audio_frame_buffer = numpy.zeros([4 * frame_count])
+    audio_frame_buffer[0:-frame_count] = audio_frame_buffer[frame_count:]
+    audio_frame_buffer[-frame_count:] = numpy.array(frame_values)
+    window = blackman(4 * frame_count)
+    audio_spectrum = fft(audio_frame_buffer * window)
+    audio_spectrum_db = 20 * numpy.log10(numpy.abs(audio_spectrum[0:2 * frame_count]) / (2 * frame_count))
+    texture_coords = numpy.linspace(20, 145, 8).astype(numpy.int8)
+    texture = audio_spectrum_db[texture_coords]
+    print(texture)
     return in_data, pyaudio.paContinue
 
 
