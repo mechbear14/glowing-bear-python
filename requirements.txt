@@ -1,0 +1,6 @@
+pillow
+numpy
+pyaudio
+scipy
+pyopengl
+pygame==2.0.0.dev6
